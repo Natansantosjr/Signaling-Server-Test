@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Camera Sender - WebRTC</title>
+<style>
+  body { font-family: sans-serif; background: #111; color: #eee; text-align: center; }
+  video { width: 480px; max-width: 90vw; border-radius: 8px; margin-top: 16px; }
+  input, button { padding: 8px; margin: 6px; font-size: 14px; }
+  #status { margin-top: 10px; font-weight: bold; }
+</style>
+</head>
+<body>
+  <h2>Camera Sender</h2>
+  <p>Envia o vídeo da webcam deste notebook para o Unity via WebRTC.</p>
+
+  <div>
+    <input id="signalingUrl" type="text" placeholder="wss://seu-servidor.com" style="width:280px" />
+    <input id="room" type="text" placeholder="nome-da-sala" value="arena-1" />
+    <button id="startBtn">Iniciar transmissão</button>
+  </div>
+
+  <div id="status">Desconectado</div>
+  <video id="localVideo" autoplay playsinline muted></video>
+
+<script>
+// ---- CONFIGURAÇÃO ----
+// Troque pelo seu TURN server (ex: coturn) além do STUN público.
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  // { urls: 'turn:SEU_TURN_SERVER:3478', username: 'USUARIO', credential: 'SENHA' },
+];
+
+let ws;
+let pc;
+let localStream;
+
+const statusEl = document.getElementById('status');
+const videoEl = document.getElementById('localVideo');
+
+function setStatus(text) {
+  statusEl.textContent = text;
+  console.log('[status]', text);
+}
+
+async function start() {
+  const signalingUrl = document.getElementById('signalingUrl').value.trim();
+  const room = document.getElementById('room').value.trim() || 'default';
+
+  if (!signalingUrl) {
+    alert('Informe a URL do signaling server (ex: wss://seu-servidor.com)');
+    return;
+  }
+
+  // 1. Captura a webcam (+ microfone)
+  localStream = await navigator.mediaDevices.getUserMedia({
+    video: { width: 1280, height: 720 },
+    audio: true,
+  });
+  videoEl.srcObject = localStream;
+
+  // 2. Conecta no signaling server
+  ws = new WebSocket(signalingUrl);
+
+  ws.onopen = () => {
+    setStatus('Conectado ao signaling server, entrando na sala...');
+    ws.send(JSON.stringify({ type: 'join', room }));
+  };
+
+  ws.onmessage = async (event) => {
+    const msg = JSON.parse(event.data);
+
+    if (msg.type === 'answer') {
+      await pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
+      setStatus('Conectado — transmitindo');
+    } else if (msg.type === 'ice-candidate' && msg.candidate) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+      } catch (err) {
+        console.error('Erro ao adicionar ICE candidate', err);
+      }
+    }
+  };
+
+  ws.onclose = () => setStatus('Desconectado do signaling server');
+  ws.onerror = (err) => console.error('WS error', err);
+
+  // 3. Cria a PeerConnection e adiciona a track de vídeo
+  pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
+
+  pc.onicecandidate = (event) => {
+    if (event.candidate) {
+      ws.send(JSON.stringify({ type: 'ice-candidate', candidate: event.candidate }));
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    console.log('Connection state:', pc.connectionState);
+    if (pc.connectionState === 'connected') setStatus('Conectado — transmitindo');
+    if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+      setStatus('Conexão perdida');
+    }
+  };
+
+  // 4. Cria a offer e espera a sala ter o receiver (Quest) para enviar
+  //    Aqui simplificamos: aguardamos alguns ms após o join antes de ofertar.
+  setTimeout(async () => {
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    ws.send(JSON.stringify({ type: 'offer', offer }));
+    setStatus('Offer enviada, aguardando resposta do Unity...');
+  }, 1000);
+}
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  start().catch((err) => {
+    console.error(err);
+    setStatus('Erro: ' + err.message);
+  });
+});
+</script>
+</body>
+</html>
