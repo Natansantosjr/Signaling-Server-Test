@@ -1,0 +1,714 @@
+# CAMBUÍ SPORTS VR
+
+## Documento de Engenharia – Fase 1
+
+### Arquitetura Corporativa, Plataforma Cloud e Modelo Operacional
+
+---
+
+# 1. ESTRUTURA C4 – NÍVEL CONTEXTO
+
+```text
+┌───────────────────────────────┐
+│      TORCEDOR VR              │
+│ Meta Quest 2 / 3 / Pro        │
+└──────────────┬────────────────┘
+               │
+               ▼
+
+┌───────────────────────────────┐
+│       CAMBUÍ SPORTS VR        │
+│ Plataforma Principal          │
+└──────────────┬────────────────┘
+               │
+ ┌─────────────┼─────────────────────┐
+ ▼             ▼                     ▼
+
+Wallet      Blockchain          Streaming
+Cambuí      Cambuí              Infrastructure
+
+ ▼             ▼                     ▼
+
+PIX       Smart Contracts      LiveKit Cluster
+NFT       Fan Tokens           WebRTC
+
+ ▼             ▼                     ▼
+
+Firebase   Analytics        Media Processing
+```
+
+---
+
+# 2. C4 – CONTAINERS
+
+## Frontend VR
+
+Tecnologia:
+
+* Unity 6
+* OpenXR
+* Meta XR SDK
+
+Responsabilidades:
+
+* Ambientes VR
+* Controle de usuário
+* Interface
+* Streaming
+* Wallet
+
+---
+
+## API Gateway
+
+Tecnologia:
+
+* NestJS
+* NGINX
+
+Função:
+
+Centralizar requisições.
+
+---
+
+## Streaming Service
+
+Tecnologia:
+
+* LiveKit
+* WebRTC
+
+Função:
+
+Distribuir vídeo.
+
+---
+
+## Replay Service
+
+Tecnologia:
+
+* NodeJS
+* Redis
+
+Função:
+
+Gerenciar replay.
+
+---
+
+## Wallet Service
+
+Tecnologia:
+
+* NestJS
+
+Função:
+
+Transações.
+
+---
+
+## Blockchain Service
+
+Tecnologia:
+
+* Go
+* Rust
+
+Função:
+
+Smart Contracts.
+
+---
+
+## Analytics Service
+
+Tecnologia:
+
+* Python
+* Spark
+
+Função:
+
+Análise comportamental.
+
+---
+
+# 3. MODELO FIREBASE
+
+## USERS
+
+```json
+{
+ "id":"uuid",
+ "name":"",
+ "email":"",
+ "avatar":"",
+ "walletId":"",
+ "createdAt":"",
+ "lastAccess":"",
+ "status":"active"
+}
+```
+
+---
+
+## SUBSCRIPTIONS
+
+```json
+{
+ "subscriptionId":"",
+ "userId":"",
+ "plan":"premium",
+ "startDate":"",
+ "endDate":"",
+ "status":"active"
+}
+```
+
+---
+
+## EVENTS
+
+```json
+{
+ "eventId":"",
+ "title":"",
+ "competition":"",
+ "startDate":"",
+ "status":"scheduled"
+}
+```
+
+---
+
+## CAMERAS
+
+```json
+{
+ "cameraId":"",
+ "eventId":"",
+ "type":"drone",
+ "quality":"4k",
+ "streamUrl":""
+}
+```
+
+---
+
+## NFTS
+
+```json
+{
+ "nftId":"",
+ "ownerId":"",
+ "eventId":"",
+ "metadata":""
+}
+```
+
+---
+
+## FAN TOKENS
+
+```json
+{
+ "tokenId":"",
+ "clubId":"",
+ "supply":1000000
+}
+```
+
+---
+
+# 4. ESTRUTURA DOS MICROSSERVIÇOS
+
+```text
+sportsvr-backend
+
+├── auth-service
+├── user-service
+├── wallet-service
+├── payment-service
+├── nft-service
+├── token-service
+├── analytics-service
+├── replay-service
+├── streaming-service
+├── notification-service
+├── event-service
+└── blockchain-service
+```
+
+---
+
+# 5. AUTENTICAÇÃO
+
+Métodos:
+
+* E-mail
+* Google
+* Apple
+* Facebook
+* Wallet Cambuí
+
+---
+
+JWT
+
+```typescript
+{
+  userId:"",
+  role:"",
+  exp:""
+}
+```
+
+---
+
+Permissões:
+
+```text
+ADMIN
+
+FEDERATION
+
+CLUB
+
+PRODUCER
+
+USER
+```
+
+---
+
+# 6. ESTRUTURA BLOCKCHAIN CAMBUÍ
+
+## Nós Validadores
+
+```text
+Node 01
+Node 02
+Node 03
+Node 04
+Node 05
+```
+
+---
+
+Algoritmo:
+
+```text
+Proof of Authority
+```
+
+Mais econômico e rápido.
+
+---
+
+# 7. SMART CONTRACTS
+
+## Ingresso NFT
+
+Funções:
+
+```solidity
+mintTicket()
+
+transferTicket()
+
+cancelTicket()
+
+validateEntry()
+```
+
+---
+
+## Fan Token
+
+```solidity
+buyToken()
+
+sellToken()
+
+stakeToken()
+
+voteProposal()
+```
+
+---
+
+# 8. ESTRUTURA DA WALLET
+
+## Saldo Fiat
+
+```json
+{
+ "brl":500
+}
+```
+
+---
+
+## Saldo Cripto
+
+```json
+{
+ "cambui":10000
+}
+```
+
+---
+
+## NFTs
+
+```json
+[
+ {
+  "id":"nft001"
+ }
+]
+```
+
+---
+
+# 9. INFRAESTRUTURA DE STREAMING
+
+## Entrada
+
+```text
+Drone
+
+RTMP
+
+▼
+
+Encoder
+```
+
+---
+
+## Encoder
+
+FFmpeg
+
+```bash
+ffmpeg \
+-i stream \
+-c:v h264_nvenc \
+-b:v 6M \
+-f rtmp
+```
+
+---
+
+Perfis:
+
+```text
+4K
+1080P
+720P
+480P
+360P
+240P
+```
+
+---
+
+# 10. CLUSTER LIVEKIT
+
+```text
+Load Balancer
+
+      ▼
+
+LiveKit Node 1
+
+LiveKit Node 2
+
+LiveKit Node 3
+
+      ▼
+
+Redis Cluster
+```
+
+---
+
+Capacidade:
+
+50.000 usuários simultâneos.
+
+---
+
+# 11. SISTEMA DE REPLAY
+
+Buffer Circular
+
+```text
+15 minutos por câmera
+```
+
+---
+
+Estrutura:
+
+```text
+Replay Buffer
+
+Camera 1
+
+Camera 2
+
+Camera 3
+
+Camera 4
+
+Camera 5
+
+Camera 6
+```
+
+---
+
+Armazenamento:
+
+SSD NVMe
+
+---
+
+# 12. AMBIENTES VR
+
+## Arena Futebol
+
+Capacidade:
+
+50.000 usuários
+
+---
+
+## Arena Basquete
+
+Capacidade:
+
+20.000 usuários
+
+---
+
+## Arena E-Sports
+
+Capacidade:
+
+100.000 usuários
+
+---
+
+## Camarote Premium
+
+Experiência VIP.
+
+---
+
+## Sala Social
+
+Assistir com amigos.
+
+---
+
+# 13. SISTEMA DE AVATARES
+
+Modelo:
+
+```json
+{
+ "avatarId":"",
+ "skin":"",
+ "shirt":"",
+ "accessories":""
+}
+```
+
+---
+
+Itens comercializáveis:
+
+* Camisas
+* Bonés
+* Troféus digitais
+* Colecionáveis
+
+---
+
+# 14. PAINEL ADMINISTRATIVO
+
+Módulos:
+
+### Dashboard
+
+Receita
+
+Usuários
+
+Transmissões
+
+---
+
+### Eventos
+
+Cadastrar jogos.
+
+---
+
+### Streaming
+
+Monitorar câmeras.
+
+---
+
+### Wallet
+
+Monitorar pagamentos.
+
+---
+
+### Blockchain
+
+Monitorar contratos.
+
+---
+
+# 15. ANALYTICS
+
+Indicadores:
+
+### Usuário
+
+* Tempo de uso
+* Tempo assistido
+* Taxa de retenção
+
+---
+
+### Evento
+
+* Público
+* Receita
+* Engajamento
+
+---
+
+### Comercial
+
+* NFTs vendidos
+* Fan Tokens vendidos
+* Assinaturas
+
+---
+
+# 16. ROADMAP TÉCNICO
+
+## TRL 4
+
+Protótipo Unity
+
+Prazo:
+
+60 dias
+
+---
+
+## TRL 5
+
+Streaming Multi-Câmeras
+
+Prazo:
+
+120 dias
+
+---
+
+## TRL 6
+
+Replay + Wallet
+
+Prazo:
+
+180 dias
+
+---
+
+## TRL 7
+
+Evento piloto real
+
+Prazo:
+
+240 dias
+
+---
+
+## TRL 8
+
+10.000 usuários simultâneos
+
+Prazo:
+
+300 dias
+
+---
+
+## TRL 9
+
+Operação comercial
+
+Prazo:
+
+360 dias
+
+---
+
+# ORÇAMENTO PRELIMINAR DE DESENVOLVIMENTO
+
+### Equipe Técnica (12 meses)
+
+* Arquiteto de Software
+* Desenvolvedor Unity VR (2)
+* Backend Senior (2)
+* DevOps Cloud
+* Engenheiro de Streaming
+* Especialista Blockchain
+* UX/UI Designer
+* QA Tester
+* Cientista de Dados
+
+Estimativa:
+
+**R$ 1,8 milhões a R$ 3,2 milhões**
+
+### Infraestrutura Piloto
+
+* Cloud
+* CDN
+* LiveKit
+* Banco de Dados
+* Backup
+
+Estimativa:
+
+**R$ 120 mil a R$ 350 mil/ano**
+
+### MVP Completo (TRL 7)
+
+Estimativa total:
+
+**R$ 2,5 milhões a R$ 4,5 milhões**
+
+### Plataforma Comercial Nacional (TRL 9)
+
+Estimativa:
+
+**R$ 8 milhões a R$ 15 milhões**
+
+No próximo passo, a evolução natural é elaborar o **Livro Técnico de Engenharia (200+ páginas)** contendo OpenAPI/Swagger completo, diagramas Kubernetes, modelo Firestore detalhado, arquitetura Unity, especificação da Blockchain Cambuí e plano de implantação em produção.

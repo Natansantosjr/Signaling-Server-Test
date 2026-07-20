@@ -1,0 +1,56 @@
+[
+    {
+        "event_id": 1,
+        "name": "Centro do Campo",
+        "position": "center",
+        "stream_url": "webrtc://live.cambui.vr/cam01",
+        "quality": "4k",
+        "status": "active",
+        "is_primary": true
+    },
+    {
+        "event_id": 1,
+        "name": "Linha Lateral",
+        "position": "lateral",
+        "stream_url": "webrtc://live.cambui.vr/cam02",
+        "quality": "4k",
+        "status": "active",
+        "is_primary": false
+    },
+    {
+        "event_id": 1,
+        "name": "Gol Norte",
+        "position": "goal_north",
+        "stream_url": "webrtc://live.cambui.vr/cam03",
+        "quality": "1080p",
+        "status": "active",
+        "is_primary": false
+    },
+    {
+        "event_id": 1,
+        "name": "Gol Sul",
+        "position": "goal_south",
+        "stream_url": "webrtc://live.cambui.vr/cam04",
+        "quality": "1080p",
+        "status": "active",
+        "is_primary": false
+    },
+    {
+        "event_id": 1,
+        "name": "Arquibancada",
+        "position": "stands",
+        "stream_url": "webrtc://live.cambui.vr/cam05",
+        "quality": "720p",
+        "status": "active",
+        "is_primary": false
+    },
+    {
+        "event_id": 1,
+        "name": "Drone Aéreo",
+        "position": "drone",
+        "stream_url": "webrtc://live.cambui.vr/cam06",
+        "quality": "4k",
+        "status": "active",
+        "is_primary": false
+    }
+]

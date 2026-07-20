@@ -1,0 +1,55 @@
+{
+    "title": "events",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer"
+        },
+        "title": {
+            "type": "string",
+            "description": "Match title e.g. Bahia x Vitória"
+        },
+        "competition": {
+            "type": "string",
+            "description": "Competition name"
+        },
+        "team_home": {
+            "type": "string"
+        },
+        "team_away": {
+            "type": "string"
+        },
+        "stadium": {
+            "type": "string"
+        },
+        "start_time": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "status": {
+            "type": "string",
+            "enum": [
+                "scheduled",
+                "live",
+                "finished",
+                "cancelled"
+            ]
+        },
+        "viewers_count": {
+            "type": "integer",
+            "default": 0
+        },
+        "thumbnail_url": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "title",
+        "competition",
+        "team_home",
+        "team_away",
+        "stadium",
+        "start_time",
+        "status"
+    ]
+}

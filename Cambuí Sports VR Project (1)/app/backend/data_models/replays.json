@@ -1,0 +1,49 @@
+{
+    "title": "replays",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer"
+        },
+        "event_id": {
+            "type": "integer"
+        },
+        "camera_id": {
+            "type": "integer"
+        },
+        "title": {
+            "type": "string"
+        },
+        "start_timestamp": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "end_timestamp": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "duration_seconds": {
+            "type": "integer"
+        },
+        "replay_url": {
+            "type": "string"
+        },
+        "type": {
+            "type": "string",
+            "enum": [
+                "goal",
+                "foul",
+                "highlight",
+                "custom"
+            ]
+        }
+    },
+    "required": [
+        "event_id",
+        "camera_id",
+        "title",
+        "start_timestamp",
+        "end_timestamp",
+        "duration_seconds"
+    ]
+}

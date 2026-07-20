@@ -1,0 +1,48 @@
+{
+    "title": "analytics_metrics",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer"
+        },
+        "event_id": {
+            "type": "integer"
+        },
+        "total_viewers": {
+            "type": "integer",
+            "default": 0
+        },
+        "peak_viewers": {
+            "type": "integer",
+            "default": 0
+        },
+        "avg_watch_time_seconds": {
+            "type": "integer",
+            "default": 0
+        },
+        "most_watched_camera": {
+            "type": "string"
+        },
+        "replay_count": {
+            "type": "integer",
+            "default": 0
+        },
+        "abandonment_rate": {
+            "type": "number",
+            "default": 0
+        },
+        "revenue": {
+            "type": "number",
+            "default": 0
+        },
+        "recorded_at": {
+            "type": "string",
+            "format": "date-time"
+        }
+    },
+    "required": [
+        "event_id",
+        "total_viewers",
+        "peak_viewers"
+    ]
+}

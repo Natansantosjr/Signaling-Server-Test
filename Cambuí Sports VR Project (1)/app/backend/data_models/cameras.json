@@ -1,0 +1,59 @@
+{
+    "title": "cameras",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer"
+        },
+        "event_id": {
+            "type": "integer"
+        },
+        "name": {
+            "type": "string",
+            "description": "Camera name e.g. Centro, Lateral"
+        },
+        "position": {
+            "type": "string",
+            "enum": [
+                "center",
+                "lateral",
+                "goal_north",
+                "goal_south",
+                "stands",
+                "drone"
+            ]
+        },
+        "stream_url": {
+            "type": "string"
+        },
+        "quality": {
+            "type": "string",
+            "enum": [
+                "4k",
+                "1080p",
+                "720p",
+                "480p"
+            ]
+        },
+        "status": {
+            "type": "string",
+            "enum": [
+                "active",
+                "inactive",
+                "maintenance"
+            ]
+        },
+        "is_primary": {
+            "type": "boolean",
+            "default": false
+        }
+    },
+    "required": [
+        "event_id",
+        "name",
+        "position",
+        "stream_url",
+        "quality",
+        "status"
+    ]
+}

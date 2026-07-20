@@ -1,0 +1,46 @@
+[
+    {
+        "title": "Bahia x Vitória",
+        "competition": "Campeonato Baiano 2026",
+        "team_home": "Bahia",
+        "team_away": "Vitória",
+        "stadium": "Arena Fonte Nova",
+        "start_time": "2026-07-12T16:00:00Z",
+        "status": "live",
+        "viewers_count": 12450,
+        "thumbnail_url": ""
+    },
+    {
+        "title": "Flamengo x Palmeiras",
+        "competition": "Brasileirão Série A",
+        "team_home": "Flamengo",
+        "team_away": "Palmeiras",
+        "stadium": "Maracanã",
+        "start_time": "2026-07-12T19:00:00Z",
+        "status": "scheduled",
+        "viewers_count": 0,
+        "thumbnail_url": ""
+    },
+    {
+        "title": "Corinthians x São Paulo",
+        "competition": "Brasileirão Série A",
+        "team_home": "Corinthians",
+        "team_away": "São Paulo",
+        "stadium": "Neo Química Arena",
+        "start_time": "2026-07-11T21:00:00Z",
+        "status": "finished",
+        "viewers_count": 28700,
+        "thumbnail_url": ""
+    },
+    {
+        "title": "Grêmio x Internacional",
+        "competition": "Copa do Brasil",
+        "team_home": "Grêmio",
+        "team_away": "Internacional",
+        "stadium": "Arena do Grêmio",
+        "start_time": "2026-07-13T20:00:00Z",
+        "status": "scheduled",
+        "viewers_count": 0,
+        "thumbnail_url": ""
+    }
+]

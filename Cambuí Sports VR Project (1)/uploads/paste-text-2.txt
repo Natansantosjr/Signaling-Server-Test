@@ -1,0 +1,545 @@
+O desenvolvimento completo da plataforma Cambuí Sports VR envolve dezenas de milhares de linhas de código, múltiplos microsserviços, infraestrutura cloud, pipelines de vídeo, SDKs VR, blockchain, wallet, DevOps, LGPD e aplicações Unity. Não é viável entregar todo o código integral em uma única resposta.
+
+O caminho adequado é produzir um **Projeto Técnico Executivo (Blueprint de Engenharia)** e depois evoluir módulo por módulo até um MVP funcional.
+
+# Arquitetura de Desenvolvimento
+
+## Camada VR
+
+**Tecnologias**
+
+* Unity 6 LTS
+* OpenXR
+* Meta XR SDK
+* XR Interaction Toolkit
+* WebRTC Unity SDK
+* LiveKit SDK
+
+Módulos:
+
+```text
+SportsVRClient
+
+├── Authentication
+├── Streaming
+├── Replay
+├── Stadiums
+├── Wallet
+├── Blockchain
+├── Analytics
+├── Chat
+├── AvatarSystem
+├── Notifications
+└── Security
+```
+
+---
+
+# Camada Backend
+
+Arquitetura baseada em microsserviços.
+
+```text
+API Gateway
+
+├── Auth Service
+├── User Service
+├── Streaming Service
+├── Replay Service
+├── Wallet Service
+├── Blockchain Service
+├── Analytics Service
+├── Payment Service
+├── NFT Service
+├── Match Service
+└── Notification Service
+```
+
+Tecnologia:
+
+* Node.js
+* NestJS
+* TypeScript
+* Redis
+* RabbitMQ
+* Docker
+* Kubernetes
+
+---
+
+# Infraestrutura Cloud
+
+```text
+Oracle Cloud
+
+ou
+
+AWS
+```
+
+Serviços:
+
+* Kubernetes
+* Object Storage
+* CDN
+* GPU Servers
+* Monitoring
+
+---
+
+# Banco de Dados
+
+## Firebase
+
+Coleções principais:
+
+### Users
+
+```json
+{
+  "id": "uuid",
+  "name": "Nathan",
+  "email": "user@email.com",
+  "walletId": "wallet001",
+  "createdAt": "timestamp",
+  "status": "active"
+}
+```
+
+---
+
+### Wallets
+
+```json
+{
+  "walletId": "wallet001",
+  "balance": 150.75,
+  "tokenBalance": 3500,
+  "nfts": []
+}
+```
+
+---
+
+### Events
+
+```json
+{
+  "eventId": "match001",
+  "title": "Bahia x Vitória",
+  "startTime": "timestamp",
+  "stadiumId": "stad001",
+  "status": "live"
+}
+```
+
+---
+
+### Cameras
+
+```json
+{
+  "cameraId": "cam01",
+  "eventId": "match001",
+  "streamUrl": "webrtc://",
+  "position": "center"
+}
+```
+
+---
+
+### Replays
+
+```json
+{
+  "replayId": "rep001",
+  "cameraId": "cam01",
+  "bufferStart": "timestamp",
+  "bufferEnd": "timestamp"
+}
+```
+
+---
+
+### NFTs
+
+```json
+{
+  "nftId": "nft001",
+  "owner": "wallet001",
+  "type": "ticket",
+  "metadata": {}
+}
+```
+
+---
+
+# Sistema de Streaming
+
+## Ingestão
+
+Fluxo:
+
+```text
+Drone
+   │
+   ▼
+
+RTMP
+
+   ▼
+
+Encoder
+
+   ▼
+
+LiveKit
+
+   ▼
+
+WebRTC
+
+   ▼
+
+Quest 2
+```
+
+---
+
+## Serviço de Streaming
+
+NestJS
+
+```typescript
+@WebSocketGateway()
+export class StreamGateway {
+
+ @SubscribeMessage('joinStream')
+ async joinStream(client, payload){
+
+   const room =
+   await this.livekit.createRoom(
+      payload.matchId
+   );
+
+   client.emit('connected', room);
+
+ }
+
+}
+```
+
+---
+
+# Replay Engine
+
+Buffer circular.
+
+```typescript
+class ReplayBuffer {
+
+ private buffer = [];
+
+ add(frame){
+
+   this.buffer.push(frame);
+
+   if(this.buffer.length > 27000){
+
+      this.buffer.shift();
+
+   }
+
+ }
+
+ getReplay(seconds){
+
+   return this.buffer.slice(
+      this.buffer.length - seconds * 30
+   );
+
+ }
+
+}
+```
+
+---
+
+# Serviço Wallet
+
+API:
+
+```typescript
+POST /wallet/create
+
+POST /wallet/deposit
+
+POST /wallet/withdraw
+
+POST /wallet/pay
+
+GET /wallet/balance
+```
+
+Modelo:
+
+```typescript
+@Entity()
+class Wallet {
+
+ id:string;
+
+ balance:number;
+
+ tokenBalance:number;
+
+}
+```
+
+---
+
+# Integração Blockchain Cambuí
+
+Camada:
+
+```text
+Blockchain SDK
+
+├── Wallet
+├── NFT
+├── Token
+├── Smart Contracts
+└── Transactions
+```
+
+Interface:
+
+```typescript
+export interface BlockchainProvider {
+
+ createWallet();
+
+ transfer();
+
+ mintNFT();
+
+ getBalance();
+
+}
+```
+
+---
+
+# Gateway de Pagamentos
+
+Fluxos:
+
+## PIX
+
+```text
+Wallet
+
+▼
+
+PIX API
+
+▼
+
+Banco Parceiro
+
+▼
+
+Confirmação
+```
+
+---
+
+## Criptoativos
+
+```text
+Wallet
+
+▼
+
+Blockchain Cambuí
+
+▼
+
+Validação
+
+▼
+
+Confirmação
+```
+
+---
+
+# Sistema Multi-Câmeras
+
+Controlador:
+
+```typescript
+class CameraManager {
+
+ cameras=[];
+
+ switchCamera(id){
+
+   return this.cameras.find(
+      c => c.id === id
+   );
+
+ }
+
+}
+```
+
+No Quest:
+
+```text
+C1
+C2
+C3
+C4
+C5
+C6
+```
+
+Usuário escolhe em tempo real.
+
+---
+
+# Analytics
+
+Coleta:
+
+* Tempo assistido
+* Câmera favorita
+* Replay utilizado
+* Receita
+* Retenção
+
+Modelo:
+
+```json
+{
+  "user":"001",
+  "match":"001",
+  "camera":"cam03",
+  "watchTime":1200
+}
+```
+
+---
+
+# Segurança
+
+## Criptografia
+
+Transmissão:
+
+```text
+DTLS
+SRTP
+TLS 1.3
+```
+
+Dados:
+
+```text
+AES 256
+SHA-256
+```
+
+---
+
+# LGPD
+
+Módulos:
+
+```text
+Consent Manager
+
+Privacy Manager
+
+Data Retention Manager
+
+Audit Logs
+```
+
+APIs:
+
+```text
+GET /privacy/export
+
+DELETE /privacy/delete
+
+POST /privacy/consent
+```
+
+---
+
+# Roadmap de Engenharia
+
+### Sprint 1
+
+Infraestrutura Cloud
+
+### Sprint 2
+
+Firebase
+
+### Sprint 3
+
+Streaming LiveKit
+
+### Sprint 4
+
+Cliente Unity
+
+### Sprint 5
+
+Replay Engine
+
+### Sprint 6
+
+Wallet Cambuí
+
+### Sprint 7
+
+Blockchain
+
+### Sprint 8
+
+Analytics
+
+### Sprint 9
+
+LGPD
+
+### Sprint 10
+
+Piloto com 1.000 usuários
+
+### Sprint 11
+
+Escala para 10.000 usuários
+
+### Sprint 12
+
+Escala para 50.000 usuários
+
+# Próximo passo recomendado
+
+Produzir um conjunto completo de documentos de engenharia contendo:
+
+1. Arquitetura C4 (Contexto, Containers, Componentes e Código).
+2. Modelo de dados Firestore completo.
+3. APIs REST e WebSocket em OpenAPI/Swagger.
+4. Estrutura Kubernetes.
+5. Código-base NestJS.
+6. Código-base Unity para Quest 2/3.
+7. SDK da Wallet Cambuí.
+8. SDK da Blockchain Cambuí.
+9. Plano de testes e homologação.
+10. Plano de implantação para TRL 6 → TRL 9.

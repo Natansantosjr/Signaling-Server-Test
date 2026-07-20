@@ -1,0 +1,37 @@
+{
+  "status": "success",
+  "results": [
+    {
+      "status": "success",
+      "filename": "hero-vr-stadium-interior.jpg",
+      "url": "https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/sktha6ycaizq/hero-vr-stadium-interior.png",
+      "path": "https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/sktha6ycaizq/hero-vr-stadium-interior.png",
+      "absolute_path": "https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/sktha6ycaizq/hero-vr-stadium-interior.png"
+    },
+    {
+      "status": "success",
+      "filename": "camera-drone-aerial-view.jpg",
+      "url": "https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/skthbyicai2a/camera-drone-aerial-view.png",
+      "path": "https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/skthbyicai2a/camera-drone-aerial-view.png",
+      "absolute_path": "https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/skthbyicai2a/camera-drone-aerial-view.png"
+    },
+    {
+      "status": "success",
+      "filename": "camera-goal-view.jpg",
+      "url": "https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/skthcfacaiza/camera-goal-view.png",
+      "path": "https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/skthcfacaiza/camera-goal-view.png",
+      "absolute_path": "https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/skthcfacaiza/camera-goal-view.png"
+    },
+    {
+      "status": "success",
+      "filename": "dashboard-analytics-dark.jpg",
+      "url": "https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/skthctycai2q/dashboard-analytics-dark.png",
+      "path": "https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/skthctycai2q/dashboard-analytics-dark.png",
+      "absolute_path": "https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/skthctycai2q/dashboard-analytics-dark.png"
+    }
+  ],
+  "success_count": 4,
+  "failed_count": 0,
+  "running_count": 0,
+  "message": "Generated 4/4 images total"
+}

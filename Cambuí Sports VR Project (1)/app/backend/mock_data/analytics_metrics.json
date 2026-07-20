@@ -1,0 +1,24 @@
+[
+    {
+        "event_id": 1,
+        "total_viewers": 12450,
+        "peak_viewers": 15200,
+        "avg_watch_time_seconds": 2400,
+        "most_watched_camera": "Centro do Campo",
+        "replay_count": 3420,
+        "abandonment_rate": 12.5,
+        "revenue": 45600.0,
+        "recorded_at": "2026-07-12T16:45:00Z"
+    },
+    {
+        "event_id": 3,
+        "total_viewers": 28700,
+        "peak_viewers": 35100,
+        "avg_watch_time_seconds": 4200,
+        "most_watched_camera": "Drone Aéreo",
+        "replay_count": 8900,
+        "abandonment_rate": 8.2,
+        "revenue": 125000.0,
+        "recorded_at": "2026-07-11T23:00:00Z"
+    }
+]
