@@ -220,7 +220,7 @@ export default function CameraSender() {
         autoPlay
         playsInline
         muted
-        className="w-full max-w-md rounded-lg border border-border aspect-video bg-black object-cover"
+        className="w-full max-w-md rounded-lg border border-border aspect-video bg-black object-cover -scale-x-100"
       />
     </div>
   );
