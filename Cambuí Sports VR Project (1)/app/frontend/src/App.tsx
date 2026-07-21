@@ -5,6 +5,10 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Index from './pages/Index';
 import AuthCallback from './pages/AuthCallback';
 import AuthError from './pages/AuthError';
+import CameraSender from './pages/CameraSender'; // ajuste o caminho do import se necessário
+
+// dentro do seu <Routes>...</Routes>:
+
 
 const queryClient = new QueryClient();
 
@@ -13,6 +17,7 @@ const AppRoutes = () => (
     <Route path="/" element={<Index />} />
     <Route path="/auth/callback" element={<AuthCallback />} />
     <Route path="/auth/error" element={<AuthError />} />
+    <Route path="/camera-sender" element={<CameraSender />} />
   </Routes>
 );
 
@@ -29,3 +34,4 @@ const App = () => (
 
 export default App;
 export { AppRoutes };
+
