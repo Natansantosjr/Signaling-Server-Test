@@ -14,7 +14,11 @@
 
 import { useCallback, useRef, useState } from "react";
 
-const RAILWAY_DOMAIN = import.meta.env.VITE_RAILWAY_URL as string;
+type ImportMetaEnv = {
+  VITE_RAILWAY_URL: string;
+};
+
+const RAILWAY_DOMAIN = (import.meta as ImportMeta & { env: ImportMetaEnv }).env.VITE_RAILWAY_URL;
 const SIGNALING_WS_URL = `wss://${RAILWAY_DOMAIN}`;
 const TURN_CREDENTIALS_URL = `https://${RAILWAY_DOMAIN}/turn-credentials`;
 

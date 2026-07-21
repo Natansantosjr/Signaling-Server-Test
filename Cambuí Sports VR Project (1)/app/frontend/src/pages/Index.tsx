@@ -7,6 +7,7 @@ import { EventsPanel } from '@/components/EventsPanel';
 import { AnalyticsPanel } from '@/components/AnalyticsPanel';
 import { WalletPanel } from '@/components/WalletPanel';
 import { InfraPanel } from '@/components/InfraPanel';
+import CameraSender from './CameraSender';
 
 export default function Index() {
   const [user, setUser] = useState<any>(null);
@@ -39,6 +40,8 @@ export default function Index() {
 
   const renderPanel = () => {
     switch (activePanel) {
+      case 'camera-sender': 
+      return <CameraSender />;
       case 'streaming': return <LiveStreamPanel />;
       case 'replay': return <ReplayPanel />;
       case 'events': return <EventsPanel />;
