@@ -11,10 +11,45 @@
  * Variável de ambiente PORT (default 8080).
  */
 
+/**
+ * Servidor de sinalização WebRTC com suporte a ICE Servers (Metered/STUN).
+ * Faz o relay de mensagens entre peers e distribui credenciais TURN do Metered.
+ */
+
 const WebSocket = require('ws');
 
 const PORT = process.env.PORT || 8080;
 const wss = new WebSocket.Server({ port: PORT });
+
+// Variáveis de Ambiente do Railway (com fallbacks de segurança)
+const METERED_DOMAIN = process.env.METERED_DOMAIN || 'arena-vr.metered.live';
+const METERED_USERNAME = process.env.METERED_USERNAME || '';
+const METERED_API_KEY = process.env.METERED_API_KEY || '';
+
+// Gera a lista de ICE Servers com as variáveis de ambiente
+function getIceServers() {
+  const servers = [
+    { urls: ['stun:stun.l.google.com:19302'] }
+  ];
+
+  if (METERED_USERNAME && METERED_API_KEY) {
+    // Porta 3478 (UDP)
+    servers.push({
+      urls: [`turn:${METERED_DOMAIN}:3478`],
+      username: METERED_USERNAME,
+      credential: METERED_API_KEY
+    });
+
+    // Porta 443 (TCP/TLS - Fallback para 4G/5G e Firewalls estritos)
+    servers.push({
+      urls: [`turns:${METERED_DOMAIN}:443?transport=tcp`],
+      username: METERED_USERNAME,
+      credential: METERED_API_KEY
+    });
+  }
+
+  return servers;
+}
 
 // rooms: Map<roomId, Set<WebSocket>>
 const rooms = new Map();
@@ -43,6 +78,13 @@ wss.on('connection', (ws) => {
       currentRoom = msg.room || 'default';
       getRoom(currentRoom).add(ws);
       console.log(`Cliente entrou na sala "${currentRoom}" (${getRoom(currentRoom).size} conectado(s))`);
+
+      // ENVIAR CONFIGURAÇÃO DE ICE SERVERS APENAS PARA QUEM ACABOU DE ENTRAR
+      const configPayload = {
+        type: 'config',
+        iceServers: getIceServers()
+      };
+      ws.send(JSON.stringify(configPayload));
       return;
     }
 
@@ -68,4 +110,4 @@ wss.on('connection', (ws) => {
   });
 });
 
-console.log(`Signaling server rodando em ws://localhost:${PORT}`);
+console.log(`Signaling server rodando na porta ${PORT}`);
