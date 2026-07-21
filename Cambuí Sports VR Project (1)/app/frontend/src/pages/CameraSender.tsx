@@ -18,7 +18,10 @@ type ImportMetaEnv = {
   VITE_RAILWAY_URL: string;
 };
 
-const RAILWAY_DOMAIN = (import.meta as ImportMeta & { env: ImportMetaEnv }).env.VITE_RAILWAY_URL;
+const RAILWAY_DOMAIN =
+  (import.meta as ImportMeta & { env: ImportMetaEnv }).env.VITE_RAILWAY_URL ||
+  "signaling-server-test-production.up.railway.app"; // Fallback se a env não estiver setada
+
 const SIGNALING_WS_URL = `wss://${RAILWAY_DOMAIN}`;
 const TURN_CREDENTIALS_URL = `https://${RAILWAY_DOMAIN}/turn-credentials`;
 
@@ -57,6 +60,25 @@ export default function CameraSender() {
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
+  const sendOffer = async (pc: RTCPeerConnection, ws: WebSocket) => {
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      ws.send(
+        JSON.stringify({
+          type: "offer",
+          offer: {
+            type: offer.type,
+            sdp: offer.sdp,
+          },
+        })
+      );
+      setStatus("Offer enviada, aguardando Unity...");
+    } catch (err) {
+      console.error("Erro ao criar/enviar offer:", err);
+    }
+  };
+
   const start = useCallback(async () => {
     try {
       setIsStreaming(true);
@@ -81,38 +103,49 @@ export default function CameraSender() {
       const ws = new WebSocket(SIGNALING_WS_URL);
       wsRef.current = ws;
 
+      // FORMATAÇÃO DO ICE CANDIDATE ALINHADA COM C# JsonUtility
       pc.onicecandidate = (event) => {
         if (event.candidate && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: "ice-candidate", candidate: event.candidate }));
+          ws.send(
+            JSON.stringify({
+              type: "ice-candidate",
+              candidate: {
+                candidate: event.candidate.candidate,
+                sdpMid: event.candidate.sdpMid,
+                sdpMLineIndex: event.candidate.sdpMLineIndex ?? 0,
+              },
+            })
+          );
         }
       };
 
       pc.onconnectionstatechange = () => {
         console.log("[WebRTC] Connection state:", pc.connectionState);
-        if (pc.connectionState === "connected") setStatus("Conectado — transmitindo");
+        if (pc.connectionState === "connected") setStatus("Conectado — Transmitindo para Unity!");
         if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
-          setStatus("Conexão perdida");
+          setStatus("Conexão com a Unity perdida");
         }
       };
 
       ws.onopen = () => {
-        setStatus("Conectado ao signaling server, entrando na sala...");
+        setStatus("Conectado ao signaling. Entrando na sala...");
         ws.send(JSON.stringify({ type: "join", room }));
 
-        // Aguarda um instante pra dar tempo do lado Unity entrar na sala
-        // antes de enviar a offer.
-        setTimeout(async () => {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          ws.send(JSON.stringify({ type: "offer", offer }));
-          setStatus("Offer enviada, aguardando resposta do Unity...");
-        }, 1000);
+        // Dispara a oferta inicial
+        setTimeout(() => sendOffer(pc, ws), 1000);
       };
 
       ws.onmessage = async (event) => {
         const msg = JSON.parse(event.data);
 
+        // Se a Unity acabou de entrar na sala, podemos re-enviar a offer se necessário
+        if (msg.type === "peer-joined") {
+          console.log("[WebRTC] Novo peer detectado na sala. Re-enviando oferta...");
+          sendOffer(pc, ws);
+        }
+
         if (msg.type === "answer") {
+          console.log("[WebRTC] Answer recebida da Unity");
           await pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
         } else if (msg.type === "ice-candidate" && msg.candidate) {
           try {
@@ -149,16 +182,15 @@ export default function CameraSender() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 bg-background text-foreground">
-      <h1 className="text-2xl font-bold">Camera Sender</h1>
+    <div className="flex flex-col items-center justify-center gap-4 p-6 bg-card text-card-foreground rounded-xl border border-border">
+      <h1 className="text-xl font-bold">Transmissor de Câmera VR</h1>
       <p className="text-sm text-muted-foreground text-center max-w-md">
-        Envia o vídeo e áudio da câmera deste dispositivo para o ambiente VR
-        via WebRTC.
+        Transmita a câmera e áudio deste dispositivo diretamente para o visor VR (Unity).
       </p>
 
       <div className="flex flex-wrap gap-2 items-center justify-center">
         <input
-          className="border rounded px-3 py-2 text-sm bg-background"
+          className="border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground"
           value={room}
           onChange={(e) => setRoom(e.target.value)}
           placeholder="nome-da-sala"
@@ -167,28 +199,28 @@ export default function CameraSender() {
         {!isStreaming ? (
           <button
             onClick={start}
-            className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm font-medium"
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:opacity-90"
           >
             Iniciar transmissão
           </button>
         ) : (
           <button
             onClick={stop}
-            className="bg-destructive text-destructive-foreground px-4 py-2 rounded text-sm font-medium"
+            className="bg-destructive text-destructive-foreground px-4 py-2 rounded-md text-sm font-medium hover:opacity-90"
           >
             Parar
           </button>
         )}
       </div>
 
-      <div className="font-semibold text-sm">{status}</div>
+      <div className="font-semibold text-sm text-primary">{status}</div>
 
       <video
         ref={videoRef}
         autoPlay
         playsInline
         muted
-        className="w-full max-w-md rounded-lg border aspect-video bg-black"
+        className="w-full max-w-md rounded-lg border border-border aspect-video bg-black object-cover"
       />
     </div>
   );
