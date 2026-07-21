@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { client } from '@/lib/api';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -103,7 +103,7 @@ export function ReplayPanel() {
                 <Badge className={typeColors[selectedReplay.type]}>
                   {typeLabels[selectedReplay.type]}
                 </Badge>
-                <Badge variant="secondary" className="text-xs">
+                <Badge className="text-xs bg-muted text-muted-foreground rounded-md px-2 py-1">
                   {selectedReplay.duration_seconds}s
                 </Badge>
               </div>
@@ -132,23 +132,22 @@ export function ReplayPanel() {
 
             {/* Playback controls */}
             <div className="flex items-center justify-center gap-3">
-              <Button size="icon" variant="ghost" className="h-9 w-9 cursor-pointer">
+              <Button className="h-9 w-9 cursor-pointer">
                 <SkipBack size={16} />
               </Button>
-              <Button size="icon" variant="ghost" className="h-9 w-9 cursor-pointer">
+              <Button className="h-9 w-9 cursor-pointer">
                 <Rewind size={16} />
               </Button>
               <Button
-                size="icon"
                 className="h-12 w-12 rounded-full cursor-pointer"
                 onClick={() => setIsPlaying(!isPlaying)}
               >
                 {isPlaying ? <Pause size={20} /> : <Play size={20} />}
               </Button>
-              <Button size="icon" variant="ghost" className="h-9 w-9 cursor-pointer">
+              <Button className="h-9 w-9 cursor-pointer">
                 <FastForward size={16} />
               </Button>
-              <Button size="icon" variant="ghost" className="h-9 w-9 cursor-pointer">
+              <Button className="h-9 w-9 cursor-pointer">
                 <SkipForward size={16} />
               </Button>
             </div>
@@ -158,9 +157,9 @@ export function ReplayPanel() {
               {[0.25, 0.5, 1, 1.5, 2].map((speed) => (
                 <Button
                   key={speed}
-                  size="sm"
-                  variant={playbackSpeed === speed ? 'default' : 'outline'}
-                  className="text-xs h-7 px-2 cursor-pointer"
+                  className={`text-xs h-7 px-2 cursor-pointer rounded ${
+                    playbackSpeed === speed ? 'bg-primary text-primary-foreground' : 'border border-border'
+                  }`}
                   onClick={() => setPlaybackSpeed(speed)}
                 >
                   {speed}x

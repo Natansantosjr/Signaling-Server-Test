@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   LogIn,
+  Video,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -21,6 +22,7 @@ interface DashboardLayoutProps {
 }
 
 const navItems = [
+  { id: 'camera-sender', label: 'Câmera VR', icon: Video },
   { id: 'streaming', label: 'Transmissão', icon: Radio },
   { id: 'replay', label: 'Replay', icon: RotateCcw },
   { id: 'events', label: 'Eventos', icon: Calendar },

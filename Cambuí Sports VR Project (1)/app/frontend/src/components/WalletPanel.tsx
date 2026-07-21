@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Badge as BaseBadge } from '@/components/ui/badge';
+import { Button as BaseButton } from '@/components/ui/button';
 import {
   Wallet,
   ArrowUpRight,
@@ -10,6 +10,9 @@ import {
   CreditCard,
   Image,
 } from 'lucide-react';
+
+const Button = BaseButton as any;
+const Badge = BaseBadge as any;
 
 export function WalletPanel() {
   const walletData = {

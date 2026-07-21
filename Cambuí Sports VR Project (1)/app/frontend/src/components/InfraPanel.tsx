@@ -150,7 +150,7 @@ export function InfraPanel() {
                   <p className="text-sm font-medium text-foreground">{encoder.bitrate}</p>
                   <p className="text-xs text-muted-foreground">{encoder.fps} FPS</p>
                 </div>
-                <Badge variant={encoder.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                <Badge className="text-xs">
                   {encoder.status === 'active' ? 'Ativo' : 'Standby'}
                 </Badge>
               </div>
@@ -185,7 +185,7 @@ export function InfraPanel() {
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             {infraData.cdn.regions.map((region) => (
-              <Badge key={region} variant="secondary" className="text-xs">
+              <Badge key={region} className="text-xs">
                 {region}
               </Badge>
             ))}

@@ -26,15 +26,6 @@ const positionLabels: Record<string, string> = {
   drone: 'Drone',
 };
 
-const cameraImages: Record<string, string> = {
-  center: 'https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/sktmjmaaaiyq/logo-cambui-sports_variant_3.png',
-  lateral: 'https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/sktnsqqaaiyq/logo-cambui-sports_variant_4.png',
-  goal_north: 'https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/sktovuqaaiyq/logo-cambui-sports_variant_5.png',
-  goal_south: 'https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/sktp2tyaai2q/logo-cambui-sports_variant_6.png',
-  stands: 'https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/sktq5saaaiyq/logo-cambui-sports_variant_7.png',
-  drone: 'https://mgx-backend-cdn.metadl.com/generate/images/1190109/2026-07-12/sktskfyaaiza/logo-cambui-sports_variant_8.png',
-};
-
 export function LiveStreamPanel() {
   const [cameras, setCameras] = useState<CameraData[]>([]);
   const [expandedCamera, setExpandedCamera] = useState<number | null>(null);
@@ -76,7 +67,7 @@ export function LiveStreamPanel() {
           <Camera size={16} className="text-primary" />
           <span className="text-sm font-medium text-foreground">Multi-Câmeras VR</span>
         </div>
-        <Badge variant="destructive" className="animate-pulse-live">
+        <Badge className="inline-flex items-center rounded-full px-2 py-1 text-xs bg-red-600 text-white animate-pulse-live">
           AO VIVO
         </Badge>
         <span className="text-sm text-muted-foreground">Bahia x Vitória • Arena Fonte Nova</span>
@@ -117,13 +108,11 @@ export function LiveStreamPanel() {
               </div>
               {/* Overlay controls */}
               <div className="absolute top-3 left-3 flex items-center gap-2">
-                <Badge variant="destructive" className="text-xs animate-pulse-live">LIVE</Badge>
-                <Badge variant="secondary" className="text-xs">{quality}</Badge>
+                <Badge className="inline-flex items-center rounded-full px-2 py-1 text-xs bg-red-600 text-white animate-pulse-live">LIVE</Badge>
+                <Badge className="inline-flex items-center rounded-full px-2 py-1 text-xs bg-white/10 text-white">{quality}</Badge>
               </div>
               <div className="absolute top-3 right-3">
                 <Button
-                  size="icon"
-                  variant="secondary"
                   className="h-8 w-8 cursor-pointer"
                   onClick={() => setExpandedCamera(null)}
                 >
@@ -162,7 +151,7 @@ export function LiveStreamPanel() {
                   <span className="text-[10px] text-white/80 font-medium">LIVE</span>
                 </div>
                 <div className="absolute top-2 right-2">
-                  <Badge variant="secondary" className="text-[10px] h-5 px-1.5">{cam.quality}</Badge>
+                  <Badge className="inline-flex items-center rounded-full text-[10px] h-5 px-1.5 bg-white/10 text-white">{cam.quality}</Badge>
                 </div>
                 {/* Expand icon on hover */}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
