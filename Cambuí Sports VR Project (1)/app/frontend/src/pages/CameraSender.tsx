@@ -1,87 +1,69 @@
 /**
- * Página "Camera Sender" — captura a câmera/microfone do dispositivo e
- * transmite via WebRTC para o ambiente VR (Unity), usando o signaling
- * server + proxy TURN hospedado no Railway.
+ * Página "Camera Sender" com suporte a salas e múltiplos slots de câmera.
  *
- * Requer a variável de ambiente VITE_RAILWAY_URL configurada no Vercel,
- * contendo apenas o domínio (sem protocolo), ex:
- *   VITE_RAILWAY_URL=signaling-server-test-production.up.railway.app
+ * Fluxo:
+ *  1. Usuário digita o nome da sala e clica em "Ver câmeras".
+ *  2. Abre uma conexão WebSocket e pede o status da sala (get-status).
+ *  3. Mostra 6 botões (slots), cada um livre ou ocupado.
+ *  4. Ao clicar num slot livre, tenta reservar (join-slot). Se confirmado,
+ *     pede câmera/microfone e inicia a transmissão WebRTC pra esse slot.
  *
- * Rota sugerida: /camera-sender
- * (adicione no seu arquivo de rotas, ex: App.tsx)
- *   <Route path="/camera-sender" element={<CameraSender />} />
+ * Requer VITE_RAILWAY_URL configurada (só o domínio, sem protocolo).
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type ImportMetaEnv = {
-  VITE_RAILWAY_URL: string;
+  readonly VITE_RAILWAY_URL: string;
+  readonly VITE_API_URL: string;
 };
 
-const RAILWAY_DOMAIN =
-  (import.meta as ImportMeta & { env: ImportMetaEnv }).env.VITE_RAILWAY_URL ||
-  "signaling-server-test-production.up.railway.app"; // Fallback se a env não estiver setada
+declare global {
+  interface ImportMeta {
+    readonly env: ImportMetaEnv;
+  }
+}
 
+const RAILWAY_DOMAIN = import.meta.env.VITE_RAILWAY_URL;
 const SIGNALING_WS_URL = `wss://${RAILWAY_DOMAIN}`;
 const TURN_CREDENTIALS_URL = `https://${RAILWAY_DOMAIN}/turn-credentials`;
 
+type SlotInfo = { slot: number; occupied: boolean };
+type Stage = "room-entry" | "slot-picker" | "streaming";
+
 async function fetchIceServers(): Promise<RTCIceServer[]> {
   const fallback: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
-
-  if (!RAILWAY_DOMAIN) {
-    console.warn("VITE_RAILWAY_URL não configurada — usando apenas STUN público.");
-    return fallback;
-  }
-
+  if (!RAILWAY_DOMAIN) return fallback;
   try {
     const res = await fetch(TURN_CREDENTIALS_URL);
-    if (!res.ok) {
-      console.error("Falha ao buscar credenciais TURN:", res.status);
-      return fallback;
-    }
+    if (!res.ok) return fallback;
     const data = await res.json();
-    if (Array.isArray(data.iceServers) && data.iceServers.length > 0) {
-      return data.iceServers as RTCIceServer[];
-    }
-    return fallback;
-  } catch (err) {
-    console.error("Erro ao buscar credenciais TURN, usando apenas STUN:", err);
+    return Array.isArray(data.iceServers) && data.iceServers.length > 0
+      ? (data.iceServers as RTCIceServer[])
+      : fallback;
+  } catch {
     return fallback;
   }
 }
 
 export default function CameraSender() {
+  const [stage, setStage] = useState<Stage>("room-entry");
   const [room, setRoom] = useState("arena-1");
-  const [status, setStatus] = useState("Desconectado");
-  const [isStreaming, setIsStreaming] = useState(false);
+  const [slots, setSlots] = useState<SlotInfo[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const roomRef = useRef(room);
+  roomRef.current = room;
 
-  const sendOffer = async (pc: RTCPeerConnection, ws: WebSocket) => {
+  const startStreaming = useCallback(async (slot: number) => {
     try {
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      ws.send(
-        JSON.stringify({
-          type: "offer",
-          offer: {
-            type: offer.type,
-            sdp: offer.sdp,
-          },
-        })
-      );
-      setStatus("Offer enviada, aguardando Unity...");
-    } catch (err) {
-      console.error("Erro ao criar/enviar offer:", err);
-    }
-  };
-
-  const start = useCallback(async () => {
-    try {
-      setIsStreaming(true);
+      setStage("streaming");
       setStatus("Buscando credenciais TURN...");
       const iceServers = await fetchIceServers();
 
@@ -91,137 +73,172 @@ export default function CameraSender() {
         audio: true,
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+      if (videoRef.current) videoRef.current.srcObject = stream;
 
       const pc = new RTCPeerConnection({ iceServers });
       pcRef.current = pc;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-      setStatus("Conectando ao signaling server...");
-      const ws = new WebSocket(SIGNALING_WS_URL);
-      wsRef.current = ws;
-
-      // FORMATAÇÃO DO ICE CANDIDATE ALINHADA COM C# JsonUtility
       pc.onicecandidate = (event) => {
-        if (event.candidate && ws.readyState === WebSocket.OPEN) {
-          ws.send(
-            JSON.stringify({
-              type: "ice-candidate",
-              candidate: {
-                candidate: event.candidate.candidate,
-                sdpMid: event.candidate.sdpMid,
-                sdpMLineIndex: event.candidate.sdpMLineIndex ?? 0,
-              },
-            })
+        if (event.candidate) {
+          wsRef.current?.send(
+            JSON.stringify({ type: "ice-candidate", room: roomRef.current, slot, candidate: event.candidate })
           );
         }
       };
 
       pc.onconnectionstatechange = () => {
-        console.log("[WebRTC] Connection state:", pc.connectionState);
-        if (pc.connectionState === "connected") setStatus("Conectado — Transmitindo para Unity!");
+        if (pc.connectionState === "connected") setStatus(`Conectado — transmitindo (câmera ${slot})`);
         if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
-          setStatus("Conexão com a Unity perdida");
+          setStatus("Conexão perdida");
         }
       };
 
-      ws.onopen = () => {
-        setStatus("Conectado ao signaling. Entrando na sala...");
-        ws.send(JSON.stringify({ type: "join", room }));
-
-        // Dispara a oferta inicial
-        setTimeout(() => sendOffer(pc, ws), 1000);
-      };
-
-      ws.onmessage = async (event) => {
-        const msg = JSON.parse(event.data);
-
-        // Se a Unity acabou de entrar na sala, podemos re-enviar a offer se necessário
-        if (msg.type === "peer-joined") {
-          console.log("[WebRTC] Novo peer detectado na sala. Re-enviando oferta...");
-          sendOffer(pc, ws);
-        }
-
-        if (msg.type === "answer") {
-          console.log("[WebRTC] Answer recebida da Unity");
-          await pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
-        } else if (msg.type === "ice-candidate" && msg.candidate) {
-          try {
-            await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
-          } catch (err) {
-            console.error("Erro ao adicionar ICE candidate:", err);
-          }
-        }
-      };
-
-      ws.onclose = () => setStatus("Desconectado do signaling server");
-      ws.onerror = (err) => console.error("WS error:", err);
+      setStatus("Conectando...");
+      setTimeout(async () => {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        wsRef.current?.send(JSON.stringify({ type: "offer", room: roomRef.current, slot, offer }));
+      }, 500);
     } catch (err) {
       console.error(err);
       setStatus("Erro: " + (err as Error).message);
-      setIsStreaming(false);
     }
-  }, [room]);
+  }, []);
+
+  const connectAndGetStatus = useCallback(() => {
+    setError("");
+    const ws = new WebSocket(SIGNALING_WS_URL);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: "get-status", room: roomRef.current }));
+    };
+
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+
+      if (msg.type === "room-status") {
+        setSlots(msg.slots);
+        setStage("slot-picker");
+      } else if (msg.type === "slot-taken") {
+        setError(`Câmera ${msg.slot} acabou de ser ocupada — escolha outra.`);
+        ws.send(JSON.stringify({ type: "get-status", room: roomRef.current }));
+      } else if (msg.type === "slot-joined") {
+        startStreaming(msg.slot);
+      } else if (msg.type === "answer") {
+        pcRef.current?.setRemoteDescription(new RTCSessionDescription(msg.answer));
+      } else if (msg.type === "ice-candidate" && msg.candidate) {
+        pcRef.current?.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(console.error);
+      }
+    };
+
+    ws.onerror = (err) => console.error("WS error:", err);
+  }, [startStreaming]);
+
+  const pickSlot = useCallback((slot: number) => {
+    setSelectedSlot(slot);
+    setError("");
+    wsRef.current?.send(JSON.stringify({ type: "join-slot", room: roomRef.current, slot }));
+  }, []);
 
   const stop = useCallback(() => {
     pcRef.current?.close();
     pcRef.current = null;
-
     wsRef.current?.close();
     wsRef.current = null;
-
-    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
-
     if (videoRef.current) videoRef.current.srcObject = null;
 
-    setStatus("Desconectado");
-    setIsStreaming(false);
+    setStage("room-entry");
+    setSlots([]);
+    setSelectedSlot(null);
+    setStatus("");
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      pcRef.current?.close();
+      wsRef.current?.close();
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center gap-4 p-6 bg-card text-card-foreground rounded-xl border border-border">
-      <h1 className="text-xl font-bold">Transmissor de Câmera VR</h1>
-      <p className="text-sm text-muted-foreground text-center max-w-md">
-        Transmita a câmera e áudio deste dispositivo diretamente para o visor VR (Unity).
-      </p>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 bg-background text-foreground">
+      <h1 className="text-2xl font-bold">Camera Sender</h1>
 
-      <div className="flex flex-wrap gap-2 items-center justify-center">
-        <input
-          className="border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground"
-          value={room}
-          onChange={(e) => setRoom(e.target.value)}
-          placeholder="nome-da-sala"
-          disabled={isStreaming}
-        />
-        {!isStreaming ? (
-          <button
-            onClick={start}
-            className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:opacity-90"
-          >
-            Iniciar transmissão
+      {stage === "room-entry" && (
+        <div className="flex flex-col items-center gap-3">
+          <p className="text-sm text-muted-foreground">Digite o nome da sala pra ver as câmeras disponíveis.</p>
+          <div className="flex gap-2">
+            <input
+              className="border rounded px-3 py-2 text-sm bg-background"
+              value={room}
+              onChange={(e) => setRoom(e.target.value)}
+              placeholder="nome-da-sala"
+            />
+            <button
+              onClick={connectAndGetStatus}
+              className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm font-medium"
+            >
+              Ver câmeras
+            </button>
+          </div>
+        </div>
+      )}
+
+      {stage === "slot-picker" && (
+        <div className="flex flex-col items-center gap-3">
+          <p className="text-sm text-muted-foreground">
+            Sala <strong>{room}</strong> — escolha uma câmera disponível:
+          </p>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <div className="grid grid-cols-3 gap-2">
+            {slots.map(({ slot, occupied }) => (
+              <button
+                key={slot}
+                disabled={occupied}
+                onClick={() => pickSlot(slot)}
+                className={`px-4 py-3 rounded text-sm font-medium border ${
+                  occupied
+                    ? "bg-muted text-muted-foreground cursor-not-allowed"
+                    : selectedSlot === slot
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background hover:bg-accent"
+                }`}
+              >
+                Câmera {slot}
+                <br />
+                <span className="text-xs">{occupied ? "ocupada" : "livre"}</span>
+              </button>
+            ))}
+          </div>
+          <button onClick={stop} className="text-xs text-muted-foreground underline mt-2">
+            Voltar
           </button>
-        ) : (
+        </div>
+      )}
+
+      {stage === "streaming" && (
+        <div className="flex flex-col items-center gap-3">
+          <div className="font-semibold text-sm">{status}</div>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full max-w-md rounded-lg border aspect-video bg-black"
+          />
           <button
             onClick={stop}
-            className="bg-destructive text-destructive-foreground px-4 py-2 rounded-md text-sm font-medium hover:opacity-90"
+            className="bg-destructive text-destructive-foreground px-4 py-2 rounded text-sm font-medium"
           >
             Parar
           </button>
-        )}
-      </div>
-
-      <div className="font-semibold text-sm text-primary">{status}</div>
-
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        className="w-full max-w-md rounded-lg border border-border aspect-video bg-black object-cover -scale-x-100"
-      />
+        </div>
+      )}
     </div>
   );
 }
