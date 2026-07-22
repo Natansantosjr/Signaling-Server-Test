@@ -25,13 +25,12 @@ declare global {
 }
 
 
-
 const RAILWAY_DOMAIN = import.meta.env.VITE_RAILWAY_URL as string;
 const SIGNALING_WS_URL = `wss://${RAILWAY_DOMAIN}`;
 const TURN_CREDENTIALS_URL = `https://${RAILWAY_DOMAIN}/turn-credentials`;
 
 type SlotInfo = { slot: number; occupied: boolean };
-type Stage = "room-entry" | "slot-picker" | "streaming";
+type Stage = "room-entry" | "slot-picker" | "device-picker" | "streaming";
 
 async function fetchIceServers(): Promise<RTCIceServer[]> {
   const fallback: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
@@ -55,6 +54,10 @@ export default function CameraSender() {
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
+  const [devicesLoading, setDevicesLoading] = useState(false);
+  const [joinedSlot, setJoinedSlot] = useState<number | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -65,7 +68,26 @@ export default function CameraSender() {
   const roomRef = useRef(room);
   roomRef.current = room;
 
-  const startStreaming = useCallback(async (slot: number) => {
+  const loadVideoDevices = useCallback(async () => {
+    setDevicesLoading(true);
+    try {
+      // Pede permissão brevemente só pra desbloquear os nomes reais dos
+      // dispositivos (sem isso, o navegador esconde os labels por privacidade).
+      const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      tempStream.getTracks().forEach((t) => t.stop());
+
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = devices.filter((d) => d.kind === "videoinput");
+      setVideoDevices(videoInputs);
+      if (videoInputs.length > 0) setSelectedDeviceId(videoInputs[0].deviceId);
+    } catch (err) {
+      console.error("Erro ao listar câmeras:", err);
+    } finally {
+      setDevicesLoading(false);
+    }
+  }, []);
+
+  const startStreaming = useCallback(async (slot: number, deviceId?: string) => {
     try {
       setStage("streaming");
       setStatus("Buscando credenciais TURN...");
@@ -73,7 +95,9 @@ export default function CameraSender() {
 
       setStatus("Solicitando câmera/microfone...");
       const rawStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 1280, height: 720 },
+        video: deviceId
+          ? { deviceId: { exact: deviceId }, width: 1280, height: 720 }
+          : { width: 1280, height: 720 },
         audio: true,
       });
       rawStreamRef.current = rawStream;
@@ -164,7 +188,9 @@ export default function CameraSender() {
         setError(`Câmera ${msg.slot} acabou de ser ocupada — escolha outra.`);
         ws.send(JSON.stringify({ type: "get-status", room: roomRef.current }));
       } else if (msg.type === "slot-joined") {
-        startStreaming(msg.slot);
+        setJoinedSlot(msg.slot);
+        setStage("device-picker");
+        loadVideoDevices();
       } else if (msg.type === "answer") {
         pcRef.current?.setRemoteDescription(new RTCSessionDescription(msg.answer));
       } else if (msg.type === "ice-candidate" && msg.candidate) {
@@ -173,7 +199,7 @@ export default function CameraSender() {
     };
 
     ws.onerror = (err) => console.error("WS error:", err);
-  }, [startStreaming]);
+  }, [loadVideoDevices]);
 
   const pickSlot = useCallback((slot: number) => {
     setSelectedSlot(slot);
@@ -267,6 +293,42 @@ export default function CameraSender() {
           </div>
           <button onClick={stop} className="text-xs text-muted-foreground underline mt-2">
             Voltar
+          </button>
+        </div>
+      )}
+
+      {stage === "device-picker" && (
+        <div className="flex flex-col items-center gap-3">
+          <p className="text-sm text-muted-foreground">
+            Câmera {joinedSlot} — escolha a fonte de vídeo (webcam do notebook, GoPro, capture card, etc.):
+          </p>
+
+          {devicesLoading && <p className="text-sm">Carregando câmeras disponíveis...</p>}
+
+          {!devicesLoading && videoDevices.length > 0 && (
+            <select
+              className="border rounded px-3 py-2 text-sm bg-background max-w-xs"
+              value={selectedDeviceId}
+              onChange={(e) => setSelectedDeviceId(e.target.value)}
+            >
+              {videoDevices.map((d) => (
+                <option key={d.deviceId} value={d.deviceId}>
+                  {d.label || `Câmera ${d.deviceId.slice(0, 6)}`}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {!devicesLoading && videoDevices.length === 0 && (
+            <p className="text-sm text-destructive">Nenhuma câmera encontrada.</p>
+          )}
+
+          <button
+            onClick={() => joinedSlot && startStreaming(joinedSlot, selectedDeviceId)}
+            disabled={devicesLoading || videoDevices.length === 0}
+            className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
+          >
+            Iniciar transmissão
           </button>
         </div>
       )}
