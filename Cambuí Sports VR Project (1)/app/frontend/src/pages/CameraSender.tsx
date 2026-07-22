@@ -24,6 +24,8 @@ declare global {
   }
 }
 
+
+
 const RAILWAY_DOMAIN = import.meta.env.VITE_RAILWAY_URL as string;
 const SIGNALING_WS_URL = `wss://${RAILWAY_DOMAIN}`;
 const TURN_CREDENTIALS_URL = `https://${RAILWAY_DOMAIN}/turn-credentials`;
@@ -57,7 +59,9 @@ export default function CameraSender() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const streamRef = useRef<MediaStream | null>(null); // stream corrigida (enviada + preview)
+  const rawStreamRef = useRef<MediaStream | null>(null); // stream crua da câmera (só pra poder parar as tracks originais)
+  const rafIdRef = useRef<number | null>(null);
   const roomRef = useRef(room);
   roomRef.current = room;
 
@@ -68,10 +72,45 @@ export default function CameraSender() {
       const iceServers = await fetchIceServers();
 
       setStatus("Solicitando câmera/microfone...");
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const rawStream = await navigator.mediaDevices.getUserMedia({
         video: { width: 1280, height: 720 },
         audio: true,
       });
+      rawStreamRef.current = rawStream;
+
+      // A câmera desse dispositivo entrega o frame já espelhado (comum em
+      // alguns notebooks/webcams). Corrigimos de verdade desenhando cada
+      // frame invertido num canvas, e transmitimos o stream desse canvas —
+      // assim o preview E o vídeo enviado ficam corretos.
+      const [videoSettings] = rawStream.getVideoTracks().map((t) => t.getSettings());
+      const width = videoSettings?.width || 1280;
+      const height = videoSettings?.height || 720;
+
+      const rawVideoEl = document.createElement("video");
+      rawVideoEl.srcObject = rawStream;
+      rawVideoEl.muted = true;
+      await rawVideoEl.play();
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d")!;
+
+      const drawFrame = () => {
+        ctx.save();
+        ctx.translate(width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(rawVideoEl, 0, 0, width, height);
+        ctx.restore();
+        rafIdRef.current = requestAnimationFrame(drawFrame);
+      };
+      drawFrame();
+
+      const canvasStream = canvas.captureStream(30);
+      const correctedVideoTrack = canvasStream.getVideoTracks()[0];
+      const audioTrack = rawStream.getAudioTracks()[0];
+      const stream = new MediaStream(audioTrack ? [correctedVideoTrack, audioTrack] : [correctedVideoTrack]);
+
       streamRef.current = stream;
       if (videoRef.current) videoRef.current.srcObject = stream;
 
@@ -147,8 +186,17 @@ export default function CameraSender() {
     pcRef.current = null;
     wsRef.current?.close();
     wsRef.current = null;
+
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
+    rawStreamRef.current?.getTracks().forEach((t) => t.stop());
+    rawStreamRef.current = null;
+
     if (videoRef.current) videoRef.current.srcObject = null;
 
     setStage("room-entry");
@@ -161,7 +209,9 @@ export default function CameraSender() {
     return () => {
       pcRef.current?.close();
       wsRef.current?.close();
+      if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current);
       streamRef.current?.getTracks().forEach((t) => t.stop());
+      rawStreamRef.current?.getTracks().forEach((t) => t.stop());
     };
   }, []);
 
