@@ -24,7 +24,7 @@ declare global {
   }
 }
 
-const RAILWAY_DOMAIN = import.meta.env.VITE_RAILWAY_URL;
+const RAILWAY_DOMAIN = import.meta.env.VITE_RAILWAY_URL as string;
 const SIGNALING_WS_URL = `wss://${RAILWAY_DOMAIN}`;
 const TURN_CREDENTIALS_URL = `https://${RAILWAY_DOMAIN}/turn-credentials`;
 
